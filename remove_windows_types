@@ -1,0 +1,22 @@
+#!/usr/bin/ruby
+
+require 'pp'
+
+type_convertion = {
+  'FLOAT'  =>   'float',
+  'DOUBLE' =>   'double',
+  'USHORT' =>   'uint16_t',
+  'SHORT'  =>   'int16_t',
+}
+
+#Return array of lines of file.
+def read_file_as_array(filename)
+  #lines = ()
+  File.foreach(filename) do |line|
+    #print line
+    #lines.append(line)
+  end
+end
+
+
+pp read_file_as_array(ARGV[1])
