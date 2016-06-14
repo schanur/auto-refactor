@@ -2,21 +2,77 @@
 
 require 'pp'
 
-type_convertion = {
-  'FLOAT'  =>   'float',
-  'DOUBLE' =>   'double',
-  'USHORT' =>   'uint16_t',
-  'SHORT'  =>   'int16_t',
-}
+$type_conversion = [
+  ["FLOAT",     "float"],
+  ["DOUBLE",    "double"],
+  ["UINT",      "unsigned int"],
+  ["INT",       "int"],
+  ["USHORT",    "uint16_t"],
+  ["SHORT",     "int16_t"],
+  ["BYTE",      "uint8_t"],
+  ["BOOL",      "bool"],
+  ["DWORD",     "uint32_t"],
+  ["WORD",      "uint16_t"],
+  ["WCHAR",     "wchar_t"],
+  ["UCHAR",     "uint8_t"],
+  ["CHAR",      "char"],
+
+  ["wchat_t",   "wchar_t"],
+
+  ["wstring",   "std::wstring"],
+  ["string",    "std::string"],
+  ["vector",    "std::vector"],
+  ["map",       "std::map"],
+  ["list",      "std::list"]
+
+]
+
+$type_barrier_character_list             = [' ', '[', ']', '<', '>']# , '(', ')']
+$type_barrier_character_list_regex_str   = [' ', '[', ']', '<', '>']# , '(', ')']
+$type_barrier_regex_start                = '([' + Regexp.quote($type_barrier_character_list.join("")) + '^])'
+$type_barrier_regex_end                  = '([' + Regexp.quote($type_barrier_character_list.join("")) + '$])'
+
+def string_pair_to_type_regex(search_replace_pair)
+  # raise "Bad parameter: search_replace_pair: " if
+  # pp search_replace_pair
+  # replace_regex = Regexp.new(Regexp.quote 'b')
+  search_regex  = Regexp.new($type_barrier_regex_start + Regexp.quote(search_replace_pair[0]) + $type_barrier_regex_end)
+  # search_regex  = Regexp.new(Regexp.quote "(#{$type_barrier_start_regex}#{search_replace_pair[0]}#{$type_barrier_end_regex})")
+  # replace_regex = "\\1#{search_replace_pair[1]}\\2"
+  replace_regex = '\1' + Regexp.quote(search_replace_pair[1]) + '\2'
+  return [search_regex, replace_regex]
+end
+
+def regex_replace_list(data, regex_list)
+
+end
+
+def replace_regex_list_in_array(data, regex_list)
+  return data if regex_list.empty?
+  regex = regex_list[0]
+  replace_regex_list_in_array(data.map { |line| line.gsub(regex[0], regex[1]) },
+                              regex_list.drop(1)
+                             )
+end
 
 #Return array of lines of file.
 def read_file_as_array(filename)
-  #lines = ()
-  File.foreach(filename) do |line|
-    #print line
-    #lines.append(line)
+  lines = []
+  File.open(filename).each_with_index do |line|
+    lines.push(line)
   end
+  lines
 end
 
+puts ARGV[0]
 
-pp read_file_as_array(ARGV[1])
+
+file_data = read_file_as_array(ARGV[0])
+# puts file_data
+regex = $type_conversion.map { |type| string_pair_to_type_regex(type) }
+pp regex
+# exit 1
+new_data = replace_regex_list_in_array(file_data, regex)
+
+# new_data = replace_regex_list_in_array(file_data, [['FLOAT', 'float'], ['USHORT', 'uint16_t'], ['SHORT', 'int16_t']])
+puts new_data
