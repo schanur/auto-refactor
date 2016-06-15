@@ -2,7 +2,7 @@
 
 require 'pp'
 
-$type_conversion = [
+$int_type_conversion = [
   ["FLOAT",     "float"],
   ["DOUBLE",    "double"],
   ["UINT",      "unsigned int"],
@@ -15,20 +15,25 @@ $type_conversion = [
   ["WORD",      "uint16_t"],
   ["WCHAR",     "wchar_t"],
   ["UCHAR",     "uint8_t"],
-  ["CHAR",      "char"],
+  ["CHAR",      "char"]
+]
 
-  ["wchat_t",   "wchar_t"],
 
+$namespace_conversion = [
   ["wstring",   "std::wstring"],
   ["string",    "std::string"],
   ["vector",    "std::vector"],
   ["map",       "std::map"],
   ["list",      "std::list"]
+]
 
+$other_conversion = [
+ ["wchat_t",   "wchar_t"]
 ]
 
 $type_barrier_character_list             = [' ', '[', ']', '<', '>']# , '(', ')']
 $type_barrier_character_list_regex_str   = [' ', '[', ']', '<', '>']# , '(', ')']
+# $avoid_include                           = '(?!#include\ )'
 $type_barrier_regex_start                = '([' + Regexp.quote($type_barrier_character_list.join("")) + '^])'
 $type_barrier_regex_end                  = '([' + Regexp.quote($type_barrier_character_list.join("")) + '$])'
 
@@ -43,36 +48,61 @@ def string_pair_to_type_regex(search_replace_pair)
   return [search_regex, replace_regex]
 end
 
-def regex_replace_list(data, regex_list)
-
-end
-
 def replace_regex_list_in_array(data, regex_list)
   return data if regex_list.empty?
   regex = regex_list[0]
-  replace_regex_list_in_array(data.map { |line| line.gsub(regex[0], regex[1]) },
-                              regex_list.drop(1)
-                             )
+  new_data = data.map.with_index { |line, i|
+    begin
+      if line.include? '#include '
+        line
+      else
+        line.gsub(regex[0], regex[1])
+      end
+    rescue
+      puts "Failed to parse line " + i.to_s + ":" + line
+      exit 1
+    end
+  }
+  replace_regex_list_in_array(new_data, regex_list.drop(1))
 end
+
+def find_header_inclusion_position(data)
+  last_preprocessor_line = 0
+  data.each.with_index { |line, i|
+    if line.include? '#include ' or line.include? '#define' or  /^\ *$/ =~ line
+      last_preprocessor_line = i
+    else
+      break;
+    end
+  }
+  last_preprocessor_line
+end
+
+# def ensure_platform_inttypes_header_present(data)
+#   if data
+# end
 
 #Return array of lines of file.
 def read_file_as_array(filename)
-  lines = []
-  File.open(filename).each_with_index do |line|
-    lines.push(line)
-  end
-  lines
+  File.open(filename, "rb:iso-8859-1").each.to_a
 end
 
-puts ARGV[0]
 
 
-file_data = read_file_as_array(ARGV[0])
-# puts file_data
-regex = $type_conversion.map { |type| string_pair_to_type_regex(type) }
-pp regex
-# exit 1
-new_data = replace_regex_list_in_array(file_data, regex)
+filename = ARGV[0]
 
-# new_data = replace_regex_list_in_array(file_data, [['FLOAT', 'float'], ['USHORT', 'uint16_t'], ['SHORT', 'int16_t']])
-puts new_data
+file_data = read_file_as_array(filename)
+
+regex_int_type  = $int_type_conversion.map  { |type| string_pair_to_type_regex(type) }
+regex_namespace = $namespace_conversion.map { |type| string_pair_to_type_regex(type) }
+regex_other     = $other_conversion.map     { |type| string_pair_to_type_regex(type) }
+
+post_int_type_conversion = replace_regex_list_in_array(file_data, regex_int_type)
+
+if not post_int_type_conversion.eql? file_data
+  puts find_header_inclusion_position(post_int_type_conversion)
+  #File.rename(filename, filename + '.orig'
+  #File.delete(filename)
+  #File.open(filename, 'w') { |f| post_type_conversion.each { |line| f << line } }
+end
+  # puts new_data
