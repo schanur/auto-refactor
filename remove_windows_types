@@ -3,38 +3,40 @@
 require 'pp'
 
 $int_type_conversion = [
-  ["FLOAT",     "float"],
-  ["DOUBLE",    "double"],
-  ["UINT",      "unsigned int"],
-  ["INT",       "int"],
-  ["USHORT",    "uint16_t"],
-  ["SHORT",     "int16_t"],
-  ["BYTE",      "uint8_t"],
-  ["DWORD",     "uint32_t"],
-  ["WORD",      "uint16_t"],
-  ["WCHAR",     "wchar_t"],
-  ["UCHAR",     "uint8_t"],
-  ["CHAR",      "char"],
-  ["SIZE",      "size_t"]
+  ['FLOAT',                'float'],
+  ['DOUBLE',               'double'],
+  ['UINT',                 'unsigned int'],
+  ['INT',                  'int'],
+  ['USHORT',               'uint16_t'],
+  ['SHORT',                'int16_t'],
+  ['BYTE',                 'uint8_t'],
+  ['DWORD',                'uint32_t'],
+  ['WORD',                 'uint16_t'],
+  ['WCHAR',                'wchar_t'],
+  ['UCHAR',                'uint8_t'],
+  ['CHAR',                 'char'],
+  ['SIZE',                 'size_t']
 ]
 
 
 $namespace_conversion = [
-  ["wstring",   "std::wstring"],
-  ["string",    "std::string"],
-  ["vector",    "std::vector"],
-  ["map",       "std::map"],
-  ["list",      "std::list"]
+  ['wstring',              'std::wstring'],
+  ['string',               'std::string'],
+  ['vector',               'std::vector'],
+  ['map',                  'std::map'],
+  ['list',                 'std::list']
 ]
 
 $other_conversion = [
-  ["wchat_t",   "wchar_t"],
-  ["BOOL",      "bool"],
-  ["TRUE",      "true"],
-  ["FALSE",     "false"]
+  ['wchat_t',              'wchar_t'],
+  ['BOOL',                 'bool'],
+  ['TRUE',                 'true'],
+  ['FALSE',                'false']
 ]
 
-$header_
+$header_conversion = [
+  ['#include windows.h',   '']
+]
 
 $type_barrier_character_list             = [' ', '[', ']', '<', '>', '(', ')', ';', ',', "\t"]
 # $type_barrier_character_list_regex_str   = [' ', '[', ']', '<', '>', '(', ')']
@@ -68,7 +70,26 @@ def replace_regex_list_in_array(data, regex_list)
       exit 1
     end
   }
-  replace_regex_list_in_array(new_data, regex_list.drop(1))
+  replace_regex_list_in_array(new_data, string_replace_list.drop(1))
+end
+
+def replace_string_list_in_array(data, string_replace_list)
+  return data if string_replace_list.empty?
+  string_replace = string_replace_list[0]
+  new_data = data.map.with_index { |line, i|
+    begin
+      if line.include? '#include '
+        line
+      else
+        line.gsub(string_replace[0], string_replace[1])
+      end
+    rescue
+      puts "Failed to parse line " + i.to_s + ":" + line
+      exit 1
+    end
+  }
+  replace_string_list_in_array(new_data, string_replace_list.drop(1))
+
 end
 
 def find_header_inclusion_position(data)
@@ -106,6 +127,8 @@ regex_int_type  = $int_type_conversion.map  { |type| string_pair_to_type_regex(t
 regex_namespace = $namespace_conversion.map { |type| string_pair_to_type_regex(type) }
 regex_other     = $other_conversion.map     { |type| string_pair_to_type_regex(type) }
 
+
+
 # pp regex_other
 # exit 1
 
@@ -117,8 +140,11 @@ end
 post_namespace_conversion  = replace_regex_list_in_array(post_int_type_conversion, regex_namespace)
 post_other_conversion      = replace_regex_list_in_array(post_namespace_conversion, regex_other)
 
+header_conversion          = replace_string_list_in_array(post_other_conversion, $include_conversion)
+
+out_data                   = header_conversion
 
   #File.rename(filename, filename + '.orig'
 File.delete(filename)
-File.open(filename, 'w') { |f| post_other_conversion.each { |line| f << line } }
+File.open(filename, 'w') { |f| out_data.each { |line| f << line } }
 # puts new_data
