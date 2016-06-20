@@ -10,12 +10,12 @@ $int_type_conversion = [
   ["USHORT",    "uint16_t"],
   ["SHORT",     "int16_t"],
   ["BYTE",      "uint8_t"],
-  ["BOOL",      "bool"],
   ["DWORD",     "uint32_t"],
   ["WORD",      "uint16_t"],
   ["WCHAR",     "wchar_t"],
   ["UCHAR",     "uint8_t"],
-  ["CHAR",      "char"]
+  ["CHAR",      "char"],
+  ["SIZE",      "size_t"]
 ]
 
 
@@ -28,14 +28,19 @@ $namespace_conversion = [
 ]
 
 $other_conversion = [
- ["wchat_t",   "wchar_t"]
+  ["wchat_t",   "wchar_t"],
+  ["BOOL",      "bool"],
+  ["TRUE",      "true"],
+  ["FALSE",     "false"]
 ]
 
-$type_barrier_character_list             = [' ', '[', ']', '<', '>']# , '(', ')']
-$type_barrier_character_list_regex_str   = [' ', '[', ']', '<', '>']# , '(', ')']
+$header_
+
+$type_barrier_character_list             = [' ', '[', ']', '<', '>', '(', ')', ';', ',', "\t"]
+# $type_barrier_character_list_regex_str   = [' ', '[', ']', '<', '>', '(', ')']
 # $avoid_include                           = '(?!#include\ )'
-$type_barrier_regex_start                = '([' + Regexp.quote($type_barrier_character_list.join("")) + '^])'
-$type_barrier_regex_end                  = '([' + Regexp.quote($type_barrier_character_list.join("")) + '$])'
+$type_barrier_regex_start                = '((^|['  + Regexp.quote($type_barrier_character_list.join("")) + ']))'
+$type_barrier_regex_end                  = '(['     + Regexp.quote($type_barrier_character_list.join("")) + '])'
 
 def string_pair_to_type_regex(search_replace_pair)
   # raise "Bad parameter: search_replace_pair: " if
@@ -44,7 +49,7 @@ def string_pair_to_type_regex(search_replace_pair)
   search_regex  = Regexp.new($type_barrier_regex_start + Regexp.quote(search_replace_pair[0]) + $type_barrier_regex_end)
   # search_regex  = Regexp.new(Regexp.quote "(#{$type_barrier_start_regex}#{search_replace_pair[0]}#{$type_barrier_end_regex})")
   # replace_regex = "\\1#{search_replace_pair[1]}\\2"
-  replace_regex = '\1' + Regexp.quote(search_replace_pair[1]) + '\2'
+  replace_regex = '\1' + Regexp.quote(search_replace_pair[1]) + '\3'
   return [search_regex, replace_regex]
 end
 
@@ -69,20 +74,24 @@ end
 def find_header_inclusion_position(data)
   last_preprocessor_line = 0
   data.each.with_index { |line, i|
-    if line.include? '#include ' or line.include? '#define' or  /^\ *$/ =~ line
+    if not (line.include? '#include ' or line.include? '#define' or  /^\ *$/ =~ line)
       last_preprocessor_line = i
     else
       break;
     end
   }
-  last_preprocessor_line
+  last_preprocessor_line + 2
 end
 
-# def ensure_platform_inttypes_header_present(data)
-#   if data
-# end
+# Return the file lines with "inttypes_wrapper.h" include directive
+# inserted at a valid position if it was not already present.
+def ensure_platform_inttypes_header_present(data)
+  return data if data.include?(/plaform\/inttypes_wrapper.h/)
+  data.insert(find_header_inclusion_position(data), "#include \"platform/inttypes_wrapper.h\"\n")
+end
 
-#Return array of lines of file.
+
+# Return array of lines of file.
 def read_file_as_array(filename)
   File.open(filename, "rb:iso-8859-1").each.to_a
 end
@@ -97,12 +106,19 @@ regex_int_type  = $int_type_conversion.map  { |type| string_pair_to_type_regex(t
 regex_namespace = $namespace_conversion.map { |type| string_pair_to_type_regex(type) }
 regex_other     = $other_conversion.map     { |type| string_pair_to_type_regex(type) }
 
+# pp regex_other
+# exit 1
+
 post_int_type_conversion = replace_regex_list_in_array(file_data, regex_int_type)
 
 if not post_int_type_conversion.eql? file_data
-  puts find_header_inclusion_position(post_int_type_conversion)
-  #File.rename(filename, filename + '.orig'
-  #File.delete(filename)
-  #File.open(filename, 'w') { |f| post_type_conversion.each { |line| f << line } }
+  post_int_type_conversion = ensure_platform_inttypes_header_present(post_int_type_conversion)
 end
-  # puts new_data
+post_namespace_conversion  = replace_regex_list_in_array(post_int_type_conversion, regex_namespace)
+post_other_conversion      = replace_regex_list_in_array(post_namespace_conversion, regex_other)
+
+
+  #File.rename(filename, filename + '.orig'
+File.delete(filename)
+File.open(filename, 'w') { |f| post_other_conversion.each { |line| f << line } }
+# puts new_data
