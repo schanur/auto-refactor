@@ -35,7 +35,11 @@ $other_conversion = [
 ]
 
 $header_conversion = [
-  ['#include windows.h',   '']
+  ['#include "windows.h"',   '#include "windows_wrapper.h"'],
+  ['#include "Windows.h"',   '#include "windows_wrapper.h"'],
+  ['#include <windows.h>',   '#include "windows_wrapper.h"'],
+  ['#include <Windows.h>',   '#include "windows_wrapper.h"'],
+  ['#define min(a,b)',       '//#define min(a,b)']
 ]
 
 $type_barrier_character_list             = [' ', '[', ']', '<', '>', '(', ')', ';', ',', "\t"]
@@ -70,7 +74,7 @@ def replace_regex_list_in_array(data, regex_list)
       exit 1
     end
   }
-  replace_regex_list_in_array(new_data, string_replace_list.drop(1))
+  replace_regex_list_in_array(new_data, regex_list.drop(1))
 end
 
 def replace_string_list_in_array(data, string_replace_list)
@@ -78,13 +82,9 @@ def replace_string_list_in_array(data, string_replace_list)
   string_replace = string_replace_list[0]
   new_data = data.map.with_index { |line, i|
     begin
-      if line.include? '#include '
-        line
-      else
-        line.gsub(string_replace[0], string_replace[1])
-      end
+      line.gsub(string_replace[0], string_replace[1])
     rescue
-      puts "Failed to parse line " + i.to_s + ":" + line
+    puts "Failed to parse line " + i.to_s + ":" + line
       exit 1
     end
   }
@@ -127,11 +127,6 @@ regex_int_type  = $int_type_conversion.map  { |type| string_pair_to_type_regex(t
 regex_namespace = $namespace_conversion.map { |type| string_pair_to_type_regex(type) }
 regex_other     = $other_conversion.map     { |type| string_pair_to_type_regex(type) }
 
-
-
-# pp regex_other
-# exit 1
-
 post_int_type_conversion = replace_regex_list_in_array(file_data, regex_int_type)
 
 if not post_int_type_conversion.eql? file_data
@@ -140,9 +135,15 @@ end
 post_namespace_conversion  = replace_regex_list_in_array(post_int_type_conversion, regex_namespace)
 post_other_conversion      = replace_regex_list_in_array(post_namespace_conversion, regex_other)
 
-header_conversion          = replace_string_list_in_array(post_other_conversion, $include_conversion)
+header_conversion          = replace_string_list_in_array(post_other_conversion, $header_conversion)
 
 out_data                   = header_conversion
+
+if file_data.eql? out_data
+  puts "No changes: " + filename
+else
+  puts "Rewrite:    " + filename
+end
 
   #File.rename(filename, filename + '.orig'
 File.delete(filename)
