@@ -3,6 +3,9 @@
 require 'pp'
 
 $int_type_conversion = [
+  ['DWORD WINAPI',         'thread_sig_start_t'],
+  ['DWORD exitCode',       ''],
+  ['LONG',                 'int32_t'],
   ['FLOAT',                'float'],
   ['DOUBLE',               'double'],
   ['UINT',                 'unsigned int'],
@@ -14,10 +17,9 @@ $int_type_conversion = [
   ['WORD',                 'uint16_t'],
   ['WCHAR',                'wchar_t'],
   ['UCHAR',                'uint8_t'],
-  ['CHAR',                 'char'],
-  ['SIZE',                 'size_t']
+  ['CHAR',                 'char']
+  # ['SIZE',                 'size_t']
 ]
-
 
 $namespace_conversion = [
   ['wstring',              'std::wstring'],
@@ -27,11 +29,19 @@ $namespace_conversion = [
   ['list',                 'std::list']
 ]
 
-$other_conversion = [
+$other_barrier_regex_conversion = [
   ['wchat_t',              'wchar_t'],
   ['BOOL',                 'bool'],
   ['TRUE',                 'true'],
   ['FALSE',                'false']
+]
+
+$other_regex_conversion = [
+  ['/*#define min(a,b)',       '//#define min(a,b)']
+]
+
+$other_string_conversion = [
+  ['DWORD WINAPI',         'thread_sig_start_t']
 ]
 
 $header_conversion = [
@@ -39,10 +49,16 @@ $header_conversion = [
   ['#include "Windows.h"',   '#include "windows_wrapper.h"'],
   ['#include <windows.h>',   '#include "windows_wrapper.h"'],
   ['#include <Windows.h>',   '#include "windows_wrapper.h"'],
-  ['#define min(a,b)',       '//#define min(a,b)']
+
+  ['stdafx.h',               'StdAfx.h'],
+
+  ['tinyxml/tinyxml.h',      'tinyxml.h'],
+
+  ['Guid.h',                 'GUID.h']
+
 ]
 
-$type_barrier_character_list             = [' ', '[', ']', '<', '>', '(', ')', ';', ',', "\t"]
+$type_barrier_character_list             = [' ', '*', '[', ']', '<', '>', '(', ')', ';', ',', "\t"]
 # $type_barrier_character_list_regex_str   = [' ', '[', ']', '<', '>', '(', ')']
 # $avoid_include                           = '(?!#include\ )'
 $type_barrier_regex_start                = '((^|['  + Regexp.quote($type_barrier_character_list.join("")) + ']))'
@@ -65,6 +81,7 @@ def replace_regex_list_in_array(data, regex_list)
   new_data = data.map.with_index { |line, i|
     begin
       if line.include? '#include '
+        # Do not replace in include files.
         line
       else
         line.gsub(regex[0], regex[1])
@@ -107,8 +124,10 @@ end
 # Return the file lines with "inttypes_wrapper.h" include directive
 # inserted at a valid position if it was not already present.
 def ensure_platform_inttypes_header_present(data)
-  return data if data.include?(/plaform\/inttypes_wrapper.h/)
-  data.insert(find_header_inclusion_position(data), "#include \"platform/inttypes_wrapper.h\"\n")
+  return data if data.include?(/plaform\/all.h/)
+  data.insert(find_header_inclusion_position(data), "#include \"platform/all.h\"\n")
+  # return data if data.include?(/plaform\/inttypes_wrapper.h/)
+  # data.insert(find_header_inclusion_position(data), "#include \"platform/inttypes_wrapper.h\"\n")
 end
 
 
@@ -123,21 +142,21 @@ filename = ARGV[0]
 
 file_data = read_file_as_array(filename)
 
-regex_int_type  = $int_type_conversion.map  { |type| string_pair_to_type_regex(type) }
-regex_namespace = $namespace_conversion.map { |type| string_pair_to_type_regex(type) }
-regex_other     = $other_conversion.map     { |type| string_pair_to_type_regex(type) }
+regex_int_type                       = $int_type_conversion.map            { |type| string_pair_to_type_regex(type) }
+regex_namespace                      = $namespace_conversion.map           { |type| string_pair_to_type_regex(type) }
+barrier_regex_other                  = $other_barrier_regex_conversion.map { |type| string_pair_to_type_regex(type) }
 
-post_int_type_conversion = replace_regex_list_in_array(file_data, regex_int_type)
-
+post_int_type_conversion             = replace_regex_list_in_array(file_data, regex_int_type)
 if not post_int_type_conversion.eql? file_data
-  post_int_type_conversion = ensure_platform_inttypes_header_present(post_int_type_conversion)
+  post_int_type_conversion           = ensure_platform_inttypes_header_present(post_int_type_conversion)
 end
-post_namespace_conversion  = replace_regex_list_in_array(post_int_type_conversion, regex_namespace)
-post_other_conversion      = replace_regex_list_in_array(post_namespace_conversion, regex_other)
+post_namespace_conversion            = replace_regex_list_in_array(post_int_type_conversion,                regex_namespace)
+post_other_barrier_regex_conversion  = replace_regex_list_in_array(post_namespace_conversion,               barrier_regex_other)
+post_other_regex_conversion          = replace_regex_list_in_array(post_other_barrier_regex_conversion,    $other_regex_conversion)
+post_other_string_conversion         = replace_string_list_in_array(post_other_regex_conversion,            $other_string_conversion)
+header_conversion                    = replace_string_list_in_array(post_other_string_conversion,           $header_conversion)
 
-header_conversion          = replace_string_list_in_array(post_other_conversion, $header_conversion)
-
-out_data                   = header_conversion
+out_data                             = header_conversion
 
 if file_data.eql? out_data
   puts "No changes: " + filename
