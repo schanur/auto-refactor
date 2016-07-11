@@ -9,7 +9,9 @@ $int_type_conversion = [
   ['FLOAT',                'float'],
   ['DOUBLE',               'double'],
   ['UINT',                 'unsigned int'],
+  ['ULONGLONG',            'uint64_t'],
   ['INT',                  'int'],
+  ['INT32',                'int32_t'],
   ['USHORT',               'uint16_t'],
   ['SHORT',                'int16_t'],
   ['BYTE',                 'uint8_t'],
@@ -17,8 +19,9 @@ $int_type_conversion = [
   ['WORD',                 'uint16_t'],
   ['WCHAR',                'wchar_t'],
   ['UCHAR',                'uint8_t'],
-  ['CHAR',                 'char']
+  ['CHAR',                 'char'],
   # ['SIZE',                 'size_t']
+  ['SYSTEMTIME',           'time_t']
 ]
 
 $namespace_conversion = [
@@ -26,7 +29,11 @@ $namespace_conversion = [
   ['string',               'std::string'],
   ['vector',               'std::vector'],
   ['map',                  'std::map'],
-  ['list',                 'std::list']
+  ['list',                 'std::list'],
+  ['memcpy',               'std::memcpy'],
+  ['strcpy',               'std::strcpy'],
+
+#  ['EmptyGuid',            'Guid::EmptyGuid'],
 ]
 
 $other_barrier_regex_conversion = [
@@ -36,12 +43,25 @@ $other_barrier_regex_conversion = [
   ['FALSE',                'false']
 ]
 
+$allowed_parameter_symbol_character_list = ['.', '_', ' ', '*', '[', ']', '<', '>', '(', ')', ';', ',', "\t"]
+$parameter_field_regex = '(a-zA-Z0-9' + Regexp.quote($allowed_parameter_symbol_character_list.join("")) + ')'
+
 $other_regex_conversion = [
-  ['/*#define min(a,b)',       '//#define min(a,b)']
+  ['/*#define\ min\(a,b\)',      '//#define\ min\(a,b\)'],
+  [/wsprintf\(([a-zA-Z0-9]*),/,  'swprintf(\1, sizeof(\1),'],
+
+#                                                                                         src_str                                                        dest_buffer                     dest_buffer_size
+  [/WideCharToMultiByte\(([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*)/, 'wcstombs(\5, \3, \6'],
+  [/MultiByteToWideChar\(([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*)/, 'mbstowcs(\5, \3, \6']
 ]
+#   [/wsprintf/,  'a']
+# ['wsprintf\(([a-zA-Z0-9]*),',  'swprintf\(\1, sizeof\(\1\),']
 
 $other_string_conversion = [
-  ['DWORD WINAPI',         'thread_sig_start_t']
+  ['DWORD WINAPI',         'thread_sig_start_t'],
+  ['_isnan',               'isnan'],
+  ['#define min(a,b)',     '//#define min(a,b)'],
+  ['//////',               '////']
 ]
 
 $header_conversion = [
@@ -53,8 +73,16 @@ $header_conversion = [
   ['stdafx.h',               'StdAfx.h'],
 
   ['tinyxml/tinyxml.h',      'tinyxml.h'],
+  ['TinyXml/tinyxml.h',      'tinyxml.h'],
+  ['TinyXml\tinyxml.h',      'tinyxml.h'],
+  ['Tinyxml\tinyxml.h',      'tinyxml.h'],
+  ['"tinyxml.h"',            '<tinyxml.h>'],
 
-  ['Guid.h',                 'GUID.h']
+  ['Guid.h',                 'GUID.h'],
+
+  ['pointf.h',               'PointF.h'],
+
+  ['shared\\',                'shared/']
 
 ]
 
@@ -152,7 +180,7 @@ if not post_int_type_conversion.eql? file_data
 end
 post_namespace_conversion            = replace_regex_list_in_array(post_int_type_conversion,                regex_namespace)
 post_other_barrier_regex_conversion  = replace_regex_list_in_array(post_namespace_conversion,               barrier_regex_other)
-post_other_regex_conversion          = replace_regex_list_in_array(post_other_barrier_regex_conversion,    $other_regex_conversion)
+post_other_regex_conversion          = replace_regex_list_in_array(post_other_barrier_regex_conversion,     $other_regex_conversion)
 post_other_string_conversion         = replace_string_list_in_array(post_other_regex_conversion,            $other_string_conversion)
 header_conversion                    = replace_string_list_in_array(post_other_string_conversion,           $header_conversion)
 
