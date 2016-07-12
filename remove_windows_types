@@ -43,7 +43,7 @@ $other_barrier_regex_conversion = [
   ['FALSE',                'false']
 ]
 
-$allowed_parameter_symbol_character_list = ['.', '_', ' ', '*', '[', ']', '<', '>', '(', ')', ';', ',', "\t"]
+$allowed_parameter_symbol_character_list = ['.', '_', ' ', '*', '[', ']', '<', '>', '(', ')', ';', "\t"]
 $parameter_field_regex = '(a-zA-Z0-9' + Regexp.quote($allowed_parameter_symbol_character_list.join("")) + ')'
 
 $other_regex_conversion = [
@@ -51,8 +51,8 @@ $other_regex_conversion = [
   [/wsprintf\(([a-zA-Z0-9]*),/,  'swprintf(\1, sizeof(\1),'],
 
 #                                                                                         src_str                                                        dest_buffer                     dest_buffer_size
-  [/WideCharToMultiByte\(([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*)/, 'wcstombs(\5, \3, \6'],
-  [/MultiByteToWideChar\(([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*), ([#{$parameter_field_regex}]*)/, 'mbstowcs(\5, \3, \6']
+  [/WideCharToMultiByte\(([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*)/, 'wcstombs(\5, \3, \6);'],
+  [/MultiByteToWideChar\(([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*),\ ([#{$parameter_field_regex}]*)/, 'mbstowcs(\5, \3, \6']
 ]
 #   [/wsprintf/,  'a']
 # ['wsprintf\(([a-zA-Z0-9]*),',  'swprintf\(\1, sizeof\(\1\),']
