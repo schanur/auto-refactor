@@ -32,6 +32,7 @@ $namespace_conversion = [
   ['list',                 'std::list'],
   ['memcpy',               'std::memcpy'],
   ['strcpy',               'std::strcpy'],
+  ['isnan',                'std::isnan'],
 
 #  ['EmptyGuid',            'Guid::EmptyGuid'],
 ]
@@ -58,35 +59,50 @@ $other_regex_conversion = [
 # ['wsprintf\(([a-zA-Z0-9]*),',  'swprintf\(\1, sizeof\(\1\),']
 
 $other_string_conversion = [
-  ['DWORD WINAPI',         'thread_sig_start_t'],
-  ['_isnan',               'isnan'],
-  ['#define min(a,b)',     '//#define min(a,b)'],
-  ['//////',               '////']
+  ['DWORD WINAPI',            'thread_sig_start_t'],
+  ['_isnan',                  'isnan'],
+  ['#define min(a,b)',        '//#define min(a,b)'],
+  ['//////',                  '////']
 ]
 
 $header_conversion = [
-  ['#include "windows.h"',   '#include "windows_wrapper.h"'],
-  ['#include "Windows.h"',   '#include "windows_wrapper.h"'],
-  ['#include <windows.h>',   '#include "windows_wrapper.h"'],
-  ['#include <Windows.h>',   '#include "windows_wrapper.h"'],
+  ['#include "windows.h"',    '#include "windows_wrapper.h"'],
+  ['#include "Windows.h"',    '#include "windows_wrapper.h"'],
+  ['#include <windows.h>',    '#include "windows_wrapper.h"'],
+  ['#include <Windows.h>',    '#include "windows_wrapper.h"'],
 
-  ['stdafx.h',               'StdAfx.h'],
+  ['stdafx.h',                'StdAfx.h'],
 
-  ['tinyxml/tinyxml.h',      'tinyxml.h'],
-  ['TinyXml/tinyxml.h',      'tinyxml.h'],
-  ['TinyXml\tinyxml.h',      'tinyxml.h'],
-  ['Tinyxml\tinyxml.h',      'tinyxml.h'],
-  ['"tinyxml.h"',            '<tinyxml.h>'],
+  ['tinyxml/tinyxml.h',       'tinyxml.h'],
+  ['TinyXml/tinyxml.h',       'tinyxml.h'],
+  ['TinyXml\tinyxml.h',       'tinyxml.h'],
+  ['Tinyxml\tinyxml.h',       'tinyxml.h'],
+  ['"tinyxml.h"',             '<tinyxml.h>'],
 
-  ['Guid.h',                 'GUID.h'],
+  ['"math.h"',                '<math.h>'],
+  ['<math.h>',                '<cmmath>'],
 
-  ['pointf.h',               'PointF.h'],
+  
+  # ['<unistd.h>',              '<cunistd>'],
+  ['<time.h>',                '<ctime>'],
+  ['<string.h>',              '<cstring>'],
+  ['<limits.h>',              '<climits>'],
+  ['<stdint.h>',              '<cstdint>'],
+  ['<errno.h>',               '<cerrno>'],
+  ['<stdio.h>',               '<cstdio>'],
+  ['<stddef.h>',              '<cstddef>'],
+
+  ['Guid.h',                  'GUID.h'],
+
+  ['pointf.h',                'PointF.h'],
 
   ['shared\\',                'shared/']
 
+  
+
 ]
 
-$type_barrier_character_list             = [' ', '*', '[', ']', '<', '>', '(', ')', ';', ',', "\t"]
+$type_barrier_character_list             = ['!', ' ', '*', '[', ']', '<', '>', '(', ')', ';', ',', "\t"]
 # $type_barrier_character_list_regex_str   = [' ', '[', ']', '<', '>', '(', ')']
 # $avoid_include                           = '(?!#include\ )'
 $type_barrier_regex_start                = '((^|['  + Regexp.quote($type_barrier_character_list.join("")) + ']))'
